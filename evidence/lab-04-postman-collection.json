@@ -1,0 +1,262 @@
+{
+  "info": {
+    "name": "Cloud Issue Tracker API",
+    "description": "Lab 4 API checks. T08 requires backend/data/issues.json to contain an empty array; restore the original data after that check.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "T01 View issues",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/issues" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Returns a JSON array', () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.be.an('array'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T02 Create issue",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Printer unavailable\",\n  \"description\": \"The shared printer is not responding.\",\n  \"priority\": \"Medium\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/issues"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Creates issue with server-owned fields', () => { pm.response.to.have.status(201); const issue = pm.response.json(); pm.expect(issue.id).to.be.a('string'); pm.expect(issue.status).to.eql('Open'); pm.collectionVariables.set('issueId', issue.id); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T03 Invalid create: missing title",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"\",\n  \"description\": \"Missing valid title\",\n  \"priority\": \"Medium\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/issues"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Rejects invalid title', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().error.code).to.eql('VALIDATION_ERROR'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T04 Invalid create: priority",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Projector unavailable\",\n  \"description\": \"The classroom projector is not responding.\",\n  \"priority\": \"Critical\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/issues"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Rejects invalid priority', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().error.code).to.eql('VALIDATION_ERROR'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T05 Change issue status",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Resolved\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/issues/{{issueId}}/status"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Updates issue status', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('Resolved'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T06 Invalid status",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Deleted\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/issues/{{issueId}}/status"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Rejects invalid status', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().error.code).to.eql('VALIDATION_ERROR'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T07 Update unknown issue",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\":\"Resolved\"}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/issues/does-not-exist/status"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Returns issue not found', () => { pm.response.to.have.status(404); pm.expect(pm.response.json().error.code).to.eql('ISSUE_NOT_FOUND'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T08 View issues when none exist",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/issues" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Returns an empty array', () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.eql([]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T09 Ignore server-owned fields",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"HACKED-1\",\n  \"title\": \"Projector flickering\",\n  \"description\": \"The projector in room B204 flickers.\",\n  \"priority\": \"Low\",\n  \"status\": \"Resolved\",\n  \"createdAt\": \"2000-01-01T00:00:00.000Z\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/issues"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Server controls id, status, and createdAt', () => { pm.response.to.have.status(201); const issue = pm.response.json(); pm.expect(issue.id).not.eql('HACKED-1'); pm.expect(issue.status).to.eql('Open'); pm.expect(issue.createdAt).not.eql('2000-01-01T00:00:00.000Z'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T10 Create without JSON",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "text/plain" }],
+        "body": {
+          "mode": "raw",
+          "raw": "title=Printer",
+          "options": { "raw": { "language": "text" } }
+        },
+        "url": "{{baseUrl}}/api/issues"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Rejects non-JSON content type', () => { pm.response.to.have.status(415); pm.expect(pm.response.json().error.code).to.eql('UNSUPPORTED_MEDIA_TYPE'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T11 Create with malformed JSON",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Printer unavailable\",\n  \"description\": \"The shared printer is not responding.\",\n  \"priority\": \"Medium\",\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/issues"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Returns malformed JSON validation error', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().error.code).to.eql('VALIDATION_ERROR'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "T12 Unknown route",
+      "request": { "method": "PATCH", "url": "{{baseUrl}}/api/fake-url" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Returns route not found', () => { pm.response.to.have.status(404); pm.expect(pm.response.json().error.code).to.eql('ROUTE_NOT_FOUND'); });"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "issueId", "value": "" }
+  ]
+}
